@@ -1,0 +1,291 @@
+				ALGEBRAIC METHOD
+clc;
+A=[-1 1 1 0; 1 1 0 1];
+B=[1;2];
+v=[1 2 0 0];
+[m,n]=size(A);
+if(n>m)
+ ncm=nchoosek(n,m);
+ pair=nchoosek(1:n,m);
+ sol=[];
+ for i=1:ncm 
+ y=zeros(n,1);
+ C=A(:,pair(i,:));
+ x=inv(C)*B;
+ if all(x>=0 & x~=-inf & x~=inf)
+ y(pair(i,:))=x;
+ sol=[sol,y];
+ end
+ end
+else
+ fprintf('nCm does not exists');
+end
+sol
+sol=sol'
+for i=1: size(sol(:,1));
+obj(i,:)=sum(sol(i,:).*v);
+end
+p=max(obj)
+m=find(obj==p)
+os=sol(m,:)
+
+				BIG_M METHOD
+clc;
+clear all;
+n=2;
+% A = [-1 1; 1 1];
+% b =[1;2];
+% c = [1; 2] ;
+% [
+% s = eye(m);
+% A = [A s b] ;
+% bv = n+1 : 1:n+m;
+% cost=zeros(1,n+m+1);
+% cost(1:n)=c;
+cost = [3 2 0 0 -100 0];
+A = [1 1 1 0 0 2; 1 3 0 1 0 3; 1 -1 0 0 1 1];
+[m,n]=size(A);
+bv = [3 4 5];
+zjcj = cost(bv) * A -cost;
+zcj = [zjcj ; A];
+bigMtable = array2table(zcj);
+bigMtable.Properties.VariableNames(1:n) = {'x1', 'x2' , 's1', 's2', 'a1', 'soln'}
+
+flag = true;
+while(flag)
+    zc = zjcj(1: end-1);
+    if any(zjcj<0)
+        fprintf('The Current BFS is not optimal. \n');
+        
+        [Enter_val, pvt_col] = min(zc);
+        if all(A(:,pvt_col <=0))
+            error('LPP is unbounded. ');
+        else
+            sol = A(:,end);
+            column = A(:,pvt_col);
+            for i =1:size(A,1)
+                if(column(i) >= 0)
+                    ratio(i) = sol(i)/column(i);
+                else
+                    ratio(i) =inf;
+                end
+            end
+            [leaving_var, pvt_row] = min(ratio);
+        end
+        bv(pvt_row)=pvt_col;
+        pvt_key=A(pvt_row, pvt_col);
+        A(pvt_row,:)=A(pvt_row,:)./pvt_key;
+        for i=1:m
+            if i~=pvt_row
+                A(i,:)=A(i,:)-A(i,pvt_col).*A(pvt_row,:);
+            end
+        end
+        zjcj=zjcj-zjcj(pvt_col).*A(pvt_row,:);
+        zcj=[zjcj;A];
+        table=array2table(zcj);
+        table.Properties.VariableNames(1:n)={'x1', 'x2' , 's1', 's2', 'a1', 'soln'}
+    else
+        flag=false;
+        fprintf('The current BFS is optimal.\n');
+    end
+end
+
+				GRAPHICAL METHOD
+%input parameters
+%plot the region
+%corner points
+%intersection points
+%find feasible region
+%optimal soln
+
+%max z=2x1+x2
+%st. x1+2x2<=10 ;x1+x2<=6; x1-2x2<=1;x1,x2>=0
+clear all;
+clc
+format rat
+
+%input parameter
+c=[2,1]
+a=[1 2;1 1;1 -2]
+b=[10;6;1]
+
+%plotting
+p=max(b)
+x1=0:1:max(b)
+x12=(b(1)-a(1,1).*x1)/(a(1,2));
+x22=(b(2)-a(2,1).*x1)/(a(2,2));
+x32=(b(3)-a(3,1).*x1)./(a(3,2));
+x12=max(0,x12);
+x22=max(0,x22);
+x32=max(0,x32);
+plot(x1,x12,'r',x1,x22,'b',x1,x32,'g');
+title('x1 vs x2')
+xlabel('Value of x1')
+ylabel('Value of x2')
+
+%corner points
+cx1=find(x1==0)
+c1=find(x12==0)
+line1=[x1(:,[cx1,c1]);x12(:,[cx1,c1])]'
+c2=find(x22==0)
+line2=[x1(:,[cx1,c2]);x22(:,[cx1,c2])]'
+c3=find(x32==0)
+line3=[x1(:,[cx1,c3]);x32(:,[cx1,c3])]'
+corpt=unique([line1;line2;line3],'rows')
+
+%intersection
+pt=[0;0]
+for i=1:size(a,1)
+a1=a(i,:)
+b1=b(i,:)
+for j=i+1:size(a,1)
+a2=a(j,:);
+b2=b(j,:);
+a4=[a1;a2];
+b4=[b1;b2];
+x=a4\b4
+pt=[pt x]
+end
+end
+ptt=pt'
+allpoint=[ptt;corpt]
+points=unique(allpoint,'rows')
+%feasible region
+PT=constraint(points)
+
+						CONSTRAINT
+function output=constraint(x)
+format rat
+x
+x1=x(:,1)
+x2=x(:,2)
+cons1=round(x1+(2.*x2)-10)
+s1=find (cons1>0)
+x(s1,:)=[]
+%write 2nd Constraint % all constraints are of <= sign
+x1=x(:,1);
+x2=x(:,2);
+cons2=round ((x1+x2)-6)
+s2=find(cons2>0)
+x(s2,:) =[]
+%write 3rd Constraint % all are of <= sign
+x1=x(: , 1) ;
+x2=x(: , 2) ;
+cons3=round ((x1 - (2 .*x2))-1)
+s3=find(cons3>0)
+x(s3,:) =[]
+output=x
+end
+
+					2 PHASE
+clc
+clear all;
+originalC=[-7.5 3 0 0 0 -1 -1 0];
+info=[3 -1 -1 -1 0 1 0 3; 1 -1 1 0 -1 0 1 2];
+bv=[6 7];
+
+%PHASE-1
+cost=[0 0 0 0 0 -1 -1 0];
+A=info;
+[m,n]=size(A);
+startBV=find(cost<0)
+zjcj=cost(bv)*A-cost;
+zcj=[zjcj;A];
+simptable=array2table(zcj);
+simptable.Properties.VariableNames(1:n)={'x1','x2','x3','s1','s2','a1','a2','sol'}
+
+flag=true;
+while(flag)
+    zc=zjcj(1:end-1);
+    if any (zjcj<0);
+     fprintf('The current BFS is not optimal');
+
+[Enter_var,pvt_col]=min(zc);
+if all (A(:,pvt_col<=0))
+    error('The lpp is unbounded')
+else
+    sol=A(:,end);
+    column=A(:,pvt_col);
+    for i=1:size(A,1)
+     if (column(i)>=0)
+         ratio(i)=sol(i)./column(i);
+     else
+         ratio(i)=inf;
+     end
+    end
+    [leaving_var,pvt_row]=min(ratio);
+    end
+    bv(pvt_row)=pvt_col;
+    pvt_key=A(pvt_row,pvt_col);
+    A(pvt_row,:)=A(pvt_row,:)./pvt_key;
+for i = 1:m
+    if i~=pvt_row
+    A(i,:)=A(i,:) - A(i,pvt_col).*A(pvt_row,:);
+    end
+end
+    zjcj=zjcj-zjcj(pvt_col).*A(pvt_row,:)
+    zcj=[zjcj;A];
+    table=array2table(zcj);
+    table.Properties.VariableNames(1:n)={'x1','x2','x3','s1','s2','a1','a2','sol'}
+else
+
+    flag=false;
+    fprintf('The BFS is bounded');
+end
+end
+						SIMPLEX
+clc;
+clear all;
+n=2;
+A = [-1 1; 1 1];  %coefficients
+b =[1;2];       %soln
+c = [1; 2] ;
+[m,n]=size(A);  %m=2 and n=2
+s = eye(m);  % s= 2X2 identity matrix
+A = [A s b] ;
+bv = n+1 : 1:n+m;
+cost=zeros(1,n+m+1);
+cost(1:n)=c;
+zjcj = cost(bv) * A -cost;
+zcj = [zjcj ; A];
+simptable = array2table(zcj);
+simptable.Properties.VariableNames(1:n+m+1) = {'x1', 'x2' , 's1' , 's2' , 'soln'}
+
+flag = true;
+while(flag)
+    zc = zjcj(1: end-1);
+    if any(zjcj<0)
+        fprintf('The Current BFS is not optimal. \n');
+        
+        [Enter_val, pvt_col] = min(zc);
+        if all(A(:,pvt_col <=0))
+            error('LPP is unbounded. ');
+        else
+            sol = A(:,end);
+            column = A(:,pvt_col);
+            for i =1:size(A,1)
+                if(column(i) >= 0)
+                    ratio(i) = sol(i)/column(i);
+                else
+                    ratio(i) =inf;
+                end
+            end
+            [leaving_var, pvt_row] = min(ratio);
+        end
+        bv(pvt_row)=pvt_col;
+        pvt_key=A(pvt_row, pvt_col);
+        A(pvt_row,:)=A(pvt_row,:)./pvt_key;
+        for i=1:m
+            if i~=pvt_row
+                A(i,:)=A(i,:)-A(i,pvt_col).*A(pvt_row,:);
+            end
+        end
+        zjcj=zjcj-zjcj(pvt_col).*A(pvt_row,:);
+        zcj=[zjcj;A];
+        table=array2table(zcj);
+        table.Properties.VariableNames(1:n+m+1)={'x1', 'x2' , 's1', 's2', 'soln'}
+    else
+        flag=false;
+        fprintf('The current BFS is Optimal.\n');
+    end
+end
